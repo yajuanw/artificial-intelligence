@@ -8,7 +8,9 @@ square_units = [cross(rs, cs) for rs in ('ABC','DEF','GHI') for cs in ('123','45
 unitlist = row_units + column_units + square_units
 
 # TODO: Update the unit list to add the new diagonal units
-unitlist = unitlist
+dig_unit1= [[item[0]+item[1] for item in zip(rows, cols)]]
+dig_unit2 = [[item[0]+item[1] for item in zip(rows, cols[::-1])]]
+unitlist = unitlist + dig_unit1 + dig_unit2
 
 
 # Must be called after all units (including diagonals) are added to the unitlist
@@ -48,8 +50,17 @@ def naked_twins(values):
     and because it is simpler (since the reduce_puzzle function already calls this
     strategy repeatedly).
     """
-    # TODO: Implement this function!
-    raise NotImplementedError
+    for unit in unitlist:
+        # find all the twins with two options already
+        twins = [[twin1, twin2] for twin1 in unit for twin2 in unit if values[twin1]==values[twin2] and twin1!=twin2 and len(values[twin1])==2]
+        # loop through all the pairs and process peers not in pairs
+        for pair in twins:
+            for box in unit:
+                if box not in pair:
+                    values[box]=values[box].replace(values[pair[0]][0],'')
+                    values[box]=values[box].replace(values[pair[0]][1],'')
+    return values
+
 
 
 def eliminate(values):
@@ -68,8 +79,13 @@ def eliminate(values):
     dict
         The values dictionary with the assigned values eliminated from peers
     """
-    # TODO: Copy your code from the classroom to complete this function
-    raise NotImplementedError
+    # find all the deterministic boxes
+    solved_values = [box for box in values.keys() if len(values[box]) == 1]
+    for box in solved_values:
+        digit = values[box]
+        for peer in peers[box]: # replace the deterministic digit in other peers
+            values[peer] = values[peer].replace(digit,'')
+    return values
 
 
 def only_choice(values):
@@ -92,8 +108,12 @@ def only_choice(values):
     -----
     You should be able to complete this function by copying your code from the classroom
     """
-    # TODO: Copy your code from the classroom to complete this function
-    raise NotImplementedError
+    for unit in unitlist:
+        for digit in '123456789':
+            dplaces = [box for box in unit if digit in values[box]]
+            if len(dplaces) == 1:
+                values[dplaces[0]] = digit
+    return values
 
 
 def reduce_puzzle(values):
@@ -108,10 +128,20 @@ def reduce_puzzle(values):
     -------
     dict or False
         The values dictionary after continued application of the constraint strategies
-        no longer produces any changes, or False if the puzzle is unsolvable 
+        no longer produces any changes, or False if the puzzle is unsolvable
     """
-    # TODO: Copy your code from the classroom and modify it to complete this function
-    raise NotImplementedError
+    solved_values = [box for box in values.keys() if len(values[box]) == 1]
+    stalled = False
+    while not stalled:
+        solved_values_before = len([box for box in values.keys() if len(values[box]) == 1])
+        values = eliminate(values)
+        values = only_choice(values)
+        values = naked_twins(values)
+        solved_values_after = len([box for box in values.keys() if len(values[box]) == 1])
+        stalled = solved_values_before == solved_values_after
+        if len([box for box in values.keys() if len(values[box]) == 0]):
+            return False
+    return values
 
 
 def search(values):
@@ -133,8 +163,20 @@ def search(values):
     You should be able to complete this function by copying your code from the classroom
     and extending it to call the naked twins strategy.
     """
-    # TODO: Copy your code from the classroom to complete this function
-    raise NotImplementedError
+    values = reduce_puzzle(values)
+    if values is False: # failed previously
+        return False
+    if all(len(values[box])==1 for box in values.keys()):
+        return values
+
+    n,s = min((len(values[s]), s) for s in values.keys() if len(values[s]) > 1)
+
+    for d in values[s]:
+        new_sudoku = values.copy()
+        new_sudoku[s] = d
+        attempt = search(new_sudoku)
+        if attempt:
+            return attempt
 
 
 def solve(grid):
@@ -144,7 +186,7 @@ def solve(grid):
     ----------
     grid(string)
         a string representing a sudoku grid.
-        
+
         Ex. '2.............62....1....7...6..8...3...9...7...6..4...4....8....52.............3'
 
     Returns
