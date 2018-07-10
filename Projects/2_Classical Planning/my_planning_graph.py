@@ -162,23 +162,24 @@ class PlanningGraph:
         --------
         Russell-Norvig 10.3.1 (3rd Edition)
         """
-        i = 0
+        level = 0
         cost = 0
-        _allGoalsMet_ = False
-        _goalCopy = self.goal.copy()
-        while not self._is_leveled:
-            findGoals = []
-            for _goal in _goalCopy:
-                if _goal in self.literal_layers[:-1]:
-                    #findGoals.append(_goal)
-                    _goalCopy.remove(_goal)
-                    cost += i
+        _goals = list(self.goal)
+        tmp = []
+        while not self._is_leveled: # not leveled
+            while _goals:   # loop through all the goals
+                goal = _goals.pop()
+                if goal in self.literal_layers[-1]:
+                    cost += level
+                else:
+                    tmp.append(goal)
+            _goals, tmp = tmp, _goals # tmp: remaining goals, _goals: [], and then swap
 
-            if not len(_goalCopy):
+            if not len(_goals):
                 return cost
             else:
                 self._extend()
-            i += 2
+            level += 1
 
 
     def h_maxlevel(self):
